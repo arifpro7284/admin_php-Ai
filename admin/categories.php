@@ -1,0 +1,16 @@
+<?php
+require __DIR__ . '/../includes/config.php';
+require_admin();
+$editId = (int)($_GET['edit'] ?? 0);
+$editing = null;
+if ($editId) { $statement = $pdo->prepare('SELECT * FROM categories WHERE id=?'); $statement->execute([$editId]); $editing = $statement->fetch(); }
+if (isset($_GET['delete'])) { $pdo->prepare('DELETE FROM categories WHERE id=?')->execute([(int)$_GET['delete']]); flash('success', 'Category deleted. Products were kept and uncategorised.'); redirect('admin/categories.php'); }
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['name'])) {
+	$id = (int)($_POST['id'] ?? 0); $data = [trim($_POST['name']), trim($_POST['slug'])];
+	if ($id) { $statement = $pdo->prepare('UPDATE categories SET name=?, slug=? WHERE id=?'); $statement->execute([...$data, $id]); flash('success', 'Category updated.'); }
+	else { $statement = $pdo->prepare('INSERT INTO categories (name,slug) VALUES (?,?)'); $statement->execute($data); flash('success', 'Category added.'); }
+	redirect('admin/categories.php');
+}
+$categories = $pdo->query('SELECT c.*,COUNT(p.id) products FROM categories c LEFT JOIN products p ON p.category_id=c.id GROUP BY c.id ORDER BY c.name')->fetchAll();
+$pageTitle = 'Manage categories'; require __DIR__ . '/../includes/header.php';
+?><div class="admin-shell"><div class="row g-0"><aside class="col-lg-2 admin-side"><div class="eyebrow">Control room</div><h2 class="h4 mt-2">Nexa admin</h2><nav class="mt-4"><a href="index.php">Overview</a><a href="products.php">Products</a><a class="active" href="categories.php">Categories</a><a href="orders.php">Orders</a><a href="users.php">Users</a></nav></aside><section class="col-lg-10 p-4 p-lg-5"><h1 class="h2 mb-4">Categories</h1><div class="row g-4"><div class="col-lg-5"><form method="post" class="panel"><h2 class="h5"><?= $editing ? 'Edit category' : 'Add category' ?></h2><input type="hidden" name="id" value="<?= $editing['id'] ?? 0 ?>"><input required name="name" class="form-control my-3" placeholder="Category name" value="<?= e($editing['name'] ?? '') ?>"><input required name="slug" class="form-control mb-3" placeholder="category-slug" value="<?= e($editing['slug'] ?? '') ?>"><button class="btn btn-accent"><?= $editing ? 'Update category' : 'Add category' ?></button><?php if ($editing): ?><a href="categories.php" class="btn btn-outline-dark ms-2">Cancel</a><?php endif; ?></form></div><div class="col-lg-7"><div class="panel table-responsive"><table class="table"><thead><tr><th>Name</th><th>Slug</th><th>Products</th><th></th></tr></thead><tbody><?php foreach($categories as $category): ?><tr><td><?= e($category['name']) ?></td><td><?= e($category['slug']) ?></td><td><?= $category['products'] ?></td><td class="text-end"><a href="?edit=<?= $category['id'] ?>">Edit</a> · <a class="text-danger" href="?delete=<?= $category['id'] ?>" onclick="return confirm('Delete this category?')">Delete</a></td></tr><?php endforeach; ?></tbody></table></div></div></div></section></div></div><?php require __DIR__ . '/../includes/footer.php'; ?>

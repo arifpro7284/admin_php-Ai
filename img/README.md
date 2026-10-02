@@ -1,0 +1,1 @@
+Place local product and brand images in this folder. Product image URLs are seeded in database.sql and can be replaced with paths such as img/product-name.jpg from the admin product editor.
